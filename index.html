@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Redirecting…</title>
+<script>
+(function () {
+  var base = "https://sutra.noldor.tech";
+  var dest = base + window.location.pathname + window.location.search + window.location.hash;
+  window.location.replace(dest);
+})();
+</script>
+</head>
+<body>
+<p>Redirecting… If you are not redirected automatically,
+<a id="go" href="https://sutra.noldor.tech/">click here</a>.</p>
+<script>
+document.getElementById("go").href =
+  "https://sutra.noldor.tech" + window.location.pathname + window.location.search + window.location.hash;
+</script>
+</body>
+</html>
