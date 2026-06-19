@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Date-gated: re-runs 4x/day so the redirect flips to the DIRECT target on/after the cutover date.
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble date-gated redirect
+        shell: bash
+        run: |
+          mkdir -p _site
+          CUTOVER=2026-06-20
+          TODAY=$(date -u +%F)
+          if [[ "$TODAY" > "$CUTOVER" || "$TODAY" == "$CUTOVER" ]]; then
+            BASE="https://sutra.topazcomputing.com"
+            echo "cutover ACTIVE ($TODAY >= $CUTOVER): direct -> $BASE"
+          else
+            BASE="https://sutra.noldor.tech"
+            echo "pre-cutover ($TODAY < $CUTOVER): chained -> $BASE"
+          fi
+          [ -f CNAME ] && cp CNAME _site/
+          cat > _site/index.html <<HTML
+          <!DOCTYPE html>
+          <html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Redirecting…</title>
+          <script>
+          (function(){var base="$BASE";window.location.replace(base+window.location.pathname+window.location.search+window.location.hash);})();
+          </script>
+          </head>
+          <body><p>Redirecting… If you are not redirected automatically, <a id="go" href="$BASE/">click here</a>.</p>
+          <script>document.getElementById("go").href="$BASE"+window.location.pathname+window.location.search+window.location.hash;</script>
+          </body></html>
+          HTML
+          cp _site/index.html _site/404.html
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
